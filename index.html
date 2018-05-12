@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <link rel="stylesheet" href="css/font-awesome.min.css">
+    <link rel="stylesheet" href="css/bootstrap-datetimepicker.min.css">
+    <title>投票星</title>
+</head>
+<body>
+    <div class="container" id = "mainDiv">
+        <div class="page-header" >
+            <h1>投票星<small>Vote Start</small></h1>
+        </div>
+        <button type="button" class="btn btn-primary btn-lg" data-toggle="modal" data-target="#newVote">发起投票</button>
+        <button type="button" class="btn btn-primary btn-lg" onclick="getAll()">get all</button>
+        <div id="parrentDiv">
+            <div style = "padding-top: 10px;">
+                    <h3><span class="label label-default">Default</span>
+                    ceshi s fds as ds fs 
+                    </h3>
+            </div> 
+            <div style = "padding-top: 10px; padding-bottom: 10px;">
+                    author: ruoiruweruwuerIC
+            </div>
+           <table class="table">
+                <tr>
+                    <td class="col-sm-1" align = "right">
+                        ddd
+                    </td>
+                    <td class="col-sm-9">
+                            <div class="progress">
+                                    <div class="progress-bar" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100" style="width: 60%;">
+                                            xx 票
+                                    </div>
+                                  </div>
+                    </td>
+                    <td class="col-sm-2" align="center">
+                            <a href="#">toup </a>
+                    </td>
+                </tr>
+           </table>   
+        </div>
+    </div>
+    <div class="modal fade" tabindex="-1" role="dialog" aria-labelledby="newVoteLable" id="newVote">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title">发起投票</h4>
+                </div>
+                <div class="modal-body">
+                    <form action="" class="form-horizontal">
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label" for="name">名称:</label>
+                            <div class="col-sm-10">
+                                <input type="text" class="form-control" id = "name">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label" for="sTime">开始时间:</label>
+                            <div class="col-sm-10">
+                                <input type="text" class="form-control form_datatime" readonly id = "sTime">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label" for="eTime">结束时间:</label>
+                            <div class="col-sm-10">
+                                <input type="text" class="form-control form_datatime" readonly id = "eTime">
+                            </div>
+                        </div> 
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label" for="candidates">候选人:</label>
+                            <div class="col-sm-10">
+                                <input type="text" class="form-control" id = "candidates" placeholder="张三;李四;(以英文;号间隔和结尾)">
+                            </div>
+                        </div>                           
+                    </form>
+                    <div class="alert alert-danger" role="alert" id="warningAlert">
+                        <button type="button" class="close" onclick="$('#warningAlert').hide();" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                        <p id="errAlert"></p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-default" data-dismiss="modal">关闭</button>
+                    <button type="button" class="btn btn-primary" id="save">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script src="js/jquery-3.3.1.min.js"></script>
+<script src="js/bootstrap.min.js"></script>
+<script src="js/nebPay.js"></script>
+<script src="js/nebulas.js"></script>
+<script src="js/spin.min.js"></script>
+<script src="js/bootstrap-datetimepicker.min.js"></script>
+<script>
+
+    "use strict";
+
+    var dappAddress = "n1irKSoS7j82wQDjz4wsWQ5RKJocdAyXzAw";
+
+    var nebulas = require("nebulas"),
+        Account = nebulas.Account,
+        neb = new nebulas.Neb();
+    neb.setRequest(new nebulas.HttpRequest("https://testnet.nebulas.io"));
+
+    var NebPay = require("nebpay");     //https://github.com/nebulasio/nebPay
+    var nebPay = new NebPay();
+    var serialNumber;
+
+    $("#sTime").datetimepicker({
+        format: 'yyyy-mm-dd',
+        minView:'month',
+        language: 'zh-CN',
+        autoclose:true,
+        startDate:new Date()
+    }).on("click",function(){
+        // $("#sTime").datetimepicker("setEndDate",$("#eTime").val())
+    });
+
+    $("#eTime").datetimepicker({
+        format: 'yyyy-mm-dd',
+        minView:'month',
+        language: 'zh-CN',
+        autoclose:true,
+        startDate:new Date()
+    }).on("click",function(){
+        // $("#eTime").datetimepicker("setStartDate",$("#sTime".val()))
+    });
+
+    $("#warningAlert").hide();
+
+    function vote(key1, key2) { 
+        var to = dappAddress;
+        var value = "0";
+        var callFunction = "update";
+        var callArgs = "[\"" + key1 + "\",\"" + key2 + "\"]";
+
+        serialNumber = nebPay.call(to, value, callFunction, callArgs, {    //使用nebpay的call接口去调用合约,
+            listener: cbPush        //设置listener, 处理交易返回信息
+        });
+
+        intervalQuery = setInterval(function () {
+            funcIntervalQuery();
+        }, 5000);
+    }
+
+    $("#save").click(function () { 
+        $("#warningAlert").hide();
+        var name = $("#name").val();
+        var sTime = $("#sTime").val();
+        var eTime = $("#eTime").val();
+        var candidates = $("#candidates").val();
+        if($.trim(name) == ""){
+            $("#errAlert").text("名称不能为空");
+            $("#warningAlert").show();
+            return;
+        }
+        if($.trim(sTime) == ""){
+            $("#errAlert").text("开始时间不能为空");
+            $("#warningAlert").show();
+            return;
+        }
+        if($.trim(eTime) == ""){
+            $("#errAlert").text("结束时间不能为空");
+            $("#warningAlert").show();
+            return;
+        }
+        if (sTime > eTime) {
+            $("#errAlert").text("起始时间需大于结束时间");
+            $("#warningAlert").show();
+            return;
+        }
+        if($.trim(candidates) == ""){
+            $("#errAlert").text("候选人不能为空");
+            $("#warningAlert").show();
+            return;
+        }
+        if (candidates.charAt(candidates.length - 1) != ';') {
+            $("#errAlert").text("候选人请以;结尾");
+            $("#warningAlert").show();
+            return;
+        }
+
+        var to = dappAddress;
+        var value = "0";
+        var callFunction = "save"
+        var callArgs = "[\"" + name + "\",\"" + sTime + "\",\"" + eTime + "\",\"" + candidates + "\"]";
+        // var callArgs = "[\"" + name + "\",\"" + sTime + "\"]";
+
+        serialNumber = nebPay.call(to, value, callFunction, callArgs, {    //使用nebpay的call接口去调用合约,
+            listener: cbPush        //设置listener, 处理交易返回信息
+        });
+
+        intervalQuery = setInterval(function () {
+            funcIntervalQuery();
+        }, 5000);
+        
+    });
+
+    var intervalQuery;
+
+    function funcIntervalQuery() {
+        nebPay.queryPayInfo(serialNumber)   //search transaction result from server (result upload to server by app)
+            .then(function (resp) {
+                console.log("tx result: " + resp)   //resp is a JSON string
+                var respObject = JSON.parse(resp)
+                if(respObject.code === 0){
+                    clearInterval(intervalQuery)
+                }
+            })
+            .catch(function (err) {
+                console.log(err);
+            });
+    }
+
+    function cbPush(resp) {
+        console.log("response of push: " + JSON.stringify(resp))
+    }
+
+    function getOne(key) {
+        var from = Account.NewAccount().getAddressString();
+        var value = "0";
+        var nonce = "0"
+        var gas_price = "1000000"
+        var gas_limit = "2000000"
+        var callFunction = "getAll";
+        var callArgs = "[\""+ key +"\"]"; //in the form of ["args"]
+        var contract = {
+            "function": callFunction,
+            "args": callArgs
+        }
+
+        neb.api.call(from,dappAddress,value,nonce,gas_price,gas_limit,contract).then(function (resp) {
+            cbSearch(resp)
+        }).catch(function (err) {
+            //cbSearch(err)
+            console.log("error:" + err.message)
+        })
+    }
+
+    function getAll() {
+        var from = Account.NewAccount().getAddressString();
+        var value = "0";
+        var nonce = "0"
+        var gas_price = "1000000"
+        var gas_limit = "2000000"
+        var callFunction = "getAll";
+        var callArgs = "[\"\"]"; //in the form of ["args"]
+        var contract = {
+            "function": callFunction,
+            "args": callArgs
+        }
+
+        neb.api.call(from,dappAddress,value,nonce,gas_price,gas_limit,contract).then(function (resp) {
+            cbSearch(resp)
+        }).catch(function (err) {
+            //cbSearch(err)
+            console.log("error:" + err.message)
+        })
+    }
+
+    function cbSearch(resp) {
+        var result = resp.result    ////resp is an object, resp.result is a JSON string
+        console.log("return of rpc call: " + JSON.stringify(result));
+        if (result != 'null') {
+            try{
+                $("#parrentDiv").empty();
+                var array = JSON.parse(result);
+                for(var i = 0; i < array.length; i++){
+                    var vote = array[i].vote;
+                    var candidates = array[i].candidates;
+                    var childDiv = "";
+                    childDiv += "<div> <div style = 'padding-top: 10px;'><h3>";
+                    if (array[i].state == -1) {
+                        childDiv += "<span class='label label-info'>未开始</span>";
+                    }
+                    else if(array[i].state == 0){
+                        childDiv += "<span class='label label-success'>投票中</span>"
+                    }
+                    else {
+                        childDiv += "<span class='label label-default'>已结束</span>"
+                    }
+                    childDiv += " " + vote.name + "</h3></div>";
+                    childDiv +=  "<div style = 'padding-top: 10px; padding-bottom: 10px;'>from: "+vote.author+"</div>";
+                    childDiv += "<table class = 'table' >";
+                    var sum = 0;
+                    for(var j = 0; j < candidates.length; j++){
+                        sum += candidates[j].value.number;
+                    }
+                    if (sum == 0) {
+                        sum = 1;
+                    }
+                    for(var j = 0; j < candidates.length; j++){
+                        childDiv += "<tr>";
+                        childDiv += "<td class='col-sm-1' align = 'right'>" + candidates[j].value.name + "</td>";
+                        childDiv += "<td class='col-sm-9'> <div class='progress'> <div class='progress-bar' role='progressbar' aria-valuenow='60' aria-valuemin='0' aria-valuemax='100' style='width:" +candidates[j].number/sum + "%;'>"
+                        childDiv += candidates[j].value.number + "票 </div> </div></td>";
+                        childDiv += "<td class='col-sm-2' align='center'> <button type = 'button' class='btn btn-primary btn-sm' onclick='vote("+array[i].key+ ",\"" + candidates[j].key +"\")'>投TA一票</button>  </td>";
+                        childDiv += "</tr>";
+                    }
+                    childDiv += "</talbe></div>";
+                    $("#parrentDiv").append(childDiv);
+                }
+            }
+            catch(err){
+
+            }
+        }
+    }
+</script>
+</body>
+</html>
