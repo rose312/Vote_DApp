@@ -14,35 +14,16 @@
         <div class="page-header" >
             <h1>投票星<small>Vote Start</small></h1>
         </div>
+        <div align="right">
         <button type="button" class="btn btn-primary btn-lg" data-toggle="modal" data-target="#newVote">发起投票</button>
-        <button type="button" class="btn btn-primary btn-lg" onclick="getAll()">get all</button>
-        <div id="parrentDiv">
-            <div style = "padding-top: 10px;">
-                    <h3><span class="label label-default">Default</span>
-                    ceshi s fds as ds fs 
-                    </h3>
-            </div> 
-            <div style = "padding-top: 10px; padding-bottom: 10px;">
-                    author: ruoiruweruwuerIC
-            </div>
-           <table class="table">
-                <tr>
-                    <td class="col-sm-1" align = "right">
-                        ddd
-                    </td>
-                    <td class="col-sm-9">
-                            <div class="progress">
-                                    <div class="progress-bar" role="progressbar" aria-valuenow="60" aria-valuemin="0" aria-valuemax="100" style="width: 60%;">
-                                            xx 票
-                                    </div>
-                                  </div>
-                    </td>
-                    <td class="col-sm-2" align="center">
-                            <a href="#">toup </a>
-                    </td>
-                </tr>
-           </table>   
+        <button type="button" class="btn btn-primary btn-lg" onclick="getAll()">刷新结果</button>
         </div>
+
+        <div id="parrentDiv">
+            
+        </div>
+        <br>
+        <br>
     </div>
     <div class="modal fade" tabindex="-1" role="dialog" aria-labelledby="newVoteLable" id="newVote">
         <div class="modal-dialog" role="document">
@@ -101,12 +82,14 @@
 
     "use strict";
 
-    var dappAddress = "n1irKSoS7j82wQDjz4wsWQ5RKJocdAyXzAw";
+    // var dappAddress = "n1irKSoS7j82wQDjz4wsWQ5RKJocdAyXzAw"; //testnet
+    var dappAddress = "n1zL1KcxXaHw5i67nh5NbiizmJaovkgMCqz"; //main net
 
     var nebulas = require("nebulas"),
         Account = nebulas.Account,
         neb = new nebulas.Neb();
-    neb.setRequest(new nebulas.HttpRequest("https://testnet.nebulas.io"));
+    // neb.setRequest(new nebulas.HttpRequest("https://testnet.nebulas.io"));
+    neb.setRequest(new nebulas.HttpRequest("https://mainnet.nebulas.io"));
 
     var NebPay = require("nebpay");     //https://github.com/nebulasio/nebPay
     var nebPay = new NebPay();
@@ -133,6 +116,8 @@
     });
 
     $("#warningAlert").hide();
+
+    getAll();
 
     function vote(key1, key2) { 
         var to = dappAddress;
@@ -181,7 +166,7 @@
             return;
         }
         if (candidates.charAt(candidates.length - 1) != ';') {
-            $("#errAlert").text("候选人请以;结尾");
+            $("#errAlert").text("候选人请以英文;结尾");
             $("#warningAlert").show();
             return;
         }
@@ -244,6 +229,7 @@
     }
 
     function getAll() {
+        
         var from = Account.NewAccount().getAddressString();
         var value = "0";
         var nonce = "0"
@@ -271,6 +257,21 @@
             try{
                 $("#parrentDiv").empty();
                 var array = JSON.parse(result);
+                array.sort(function(a, b){
+                    if (a.state == 0) {
+                        return -1;
+                    }
+                    if (b.state == 0) {
+                        return 1;
+                    }
+                    if (a.state == -1) {
+                        return -1;
+                    }
+                    if (b.state == -1) {
+                        return 1;
+                    }
+                    return -1;
+                });
                 for(var i = 0; i < array.length; i++){
                     var vote = array[i].vote;
                     var candidates = array[i].candidates;
@@ -286,7 +287,9 @@
                         childDiv += "<span class='label label-default'>已结束</span>"
                     }
                     childDiv += " " + vote.name + "</h3></div>";
-                    childDiv +=  "<div style = 'padding-top: 10px; padding-bottom: 10px;'>from: "+vote.author+"</div>";
+                    childDiv +=  "<div style = 'padding-top: 10px; padding-bottom: 10px;'>From: "+vote.author+"</div>";
+                    childDiv += "<div style = 'padding-top: 10px; padding-bottom: 10px;'>Start Time: "+vote.sTime+"</div>";
+                    childDiv += "<div style = 'padding-top: 10px; padding-bottom: 10px;'>End Time: "+vote.eTime+"</div>";
                     childDiv += "<table class = 'table' >";
                     var sum = 0;
                     for(var j = 0; j < candidates.length; j++){
@@ -298,9 +301,14 @@
                     for(var j = 0; j < candidates.length; j++){
                         childDiv += "<tr>";
                         childDiv += "<td class='col-sm-1' align = 'right'>" + candidates[j].value.name + "</td>";
-                        childDiv += "<td class='col-sm-9'> <div class='progress'> <div class='progress-bar' role='progressbar' aria-valuenow='60' aria-valuemin='0' aria-valuemax='100' style='width:" +candidates[j].number/sum + "%;'>"
+                        childDiv += "<td class='col-sm-9'> <div class='progress'> <div class='progress-bar' role='progressbar' aria-valuenow='60' aria-valuemin='0' aria-valuemax='100' style='width:" + 100.0 * candidates[j].value.number/sum + "%;'>"
                         childDiv += candidates[j].value.number + "票 </div> </div></td>";
-                        childDiv += "<td class='col-sm-2' align='center'> <button type = 'button' class='btn btn-primary btn-sm' onclick='vote("+array[i].key+ ",\"" + candidates[j].key +"\")'>投TA一票</button>  </td>";
+                        childDiv += "<td class='col-sm-2' align='center'>";
+                        if (array[i].state == 0) {
+                            childDiv += "<button type = 'button' class='btn btn-primary btn-sm' onclick='vote("+array[i].key+ ",\"" + candidates[j].key +"\")'>投TA一票</button>"  ;
+                        }
+
+                        childDiv += "</td>";
                         childDiv += "</tr>";
                     }
                     childDiv += "</talbe></div>";
